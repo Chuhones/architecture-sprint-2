@@ -1,0 +1,254 @@
+name: sharding-repl-cache
+services:
+
+  mdb-config1:
+    image: mongo:latest
+    container_name: mdb-config1
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.10
+    volumes:
+      - mdb-config1-data:/data/db
+    command:
+      [
+          "--configsvr",
+          "--replSet",
+          "mdb-config1",
+          "--bind_ip_all",
+          "--port",
+          "27017"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+
+  mdb-sh1-rep1:
+    image: mongo:latest
+    container_name: mdb-sh1-rep1
+    restart: always
+    ports:
+      - "27118:27118"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.19
+    volumes:
+      - mdb-sh1-rep1-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard1",
+          "--bind_ip_all",
+          "--port",
+          "27118"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-sh1-rep2:
+    image: mongo:latest
+    container_name: mdb-sh1-rep2
+    restart: always
+    ports:
+      - "27218:27218"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.29
+    volumes:
+      - mdb-sh1-rep2-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard1",
+          "--bind_ip_all",
+          "--port",
+          "27218"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-sh1-rep3:
+    image: mongo:latest
+    container_name: mdb-sh1-rep3
+    restart: always
+    ports:
+      - "27318:27318"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.39
+    volumes:
+      - mdb-sh1-rep3-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard1",
+          "--bind_ip_all",
+          "--port",
+          "27318"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-sh2-rep1:
+    image: mongo:latest
+    container_name: mdb-sh2-rep1
+    restart: always
+    ports:
+      - "27119:27119"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.18
+    volumes:
+      - mdb-sh2-rep1-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard2",
+          "--bind_ip_all",
+          "--port",
+          "27119"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-sh2-rep2:
+    image: mongo:latest
+    container_name: mdb-sh2-rep2
+    restart: always
+    ports:
+      - "27219:27219"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.28
+    volumes:
+      - mdb-sh2-rep2-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard2",
+          "--bind_ip_all",
+          "--port",
+          "27219"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-sh2-rep3:
+    image: mongo:latest
+    container_name: mdb-sh2-rep3
+    restart: always
+    ports:
+      - "27319:27319"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.38
+    volumes:
+      - mdb-sh2-rep3-data:/data/db
+    command:
+      [
+          "--shardsvr",
+          "--replSet",
+          "mdb-shard2",
+          "--bind_ip_all",
+          "--port",
+          "27319"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  mdb-router1:
+    image: mongo:latest
+    container_name: mdb-router1
+    restart: always
+    ports:
+      - "27020:27020"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.7
+    volumes:
+      - mdb-router1-data:/data/db
+    command:
+      [
+          "mongos",
+          "--configdb",
+          "mdb-config1/mdb-config1:27017",
+          "--bind_ip_all",
+          "--port",
+          "27020"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  rds-cache01:
+    image: "redis:latest"
+    container_name: rds-cache01
+    ports:
+      - "6379"
+    volumes:
+      - rds-cache01-data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.30
+
+  pymongo_api:
+    container_name: pymongo_api
+    build:
+      context: ../api_app
+      dockerfile: ../api_app/Dockerfile
+    image: kazhem/pymongo_api:1.0.0
+    depends_on:
+      - mdb-router1
+    ports:
+      - 8080:8080
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.100
+    environment:
+      MONGODB_URL: "mongodb://mdb-router1:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://rds-cache01:6379"
+
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 173.17.0.0/16
+
+volumes:
+  mdb-config1-data:
+  mdb-sh1-rep1-data:
+  mdb-sh1-rep2-data:
+  mdb-sh1-rep3-data:
+  mdb-sh2-rep1-data:
+  mdb-sh2-rep2-data:
+  mdb-sh2-rep3-data:
+  mdb-router1-data:
+  rds-cache01-data:
